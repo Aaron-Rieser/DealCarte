@@ -15,14 +15,60 @@
             width: 200px; 
             height: 200px; 
             margin-left: 10px;
+            
+        }
+        #homeBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+        .input-container {
+            margin-top: 20px;
+        }
+        .input-container label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .input-container input, .input-container textarea {
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 10px;
+        }
+        #postNowBtn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #postNowBtn:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
 <body>
-    <h1>My Neighbourhood</h1>
+    <h1>Post to your hood</h1>
+    <button id="homeBtn" onclick="window.location.href='index.html'">Home</button>
     <div id="map-container">
         <p>My neighbourhood: <span id="neighbourhood">Loading...</span></p>
         <div id="map"></div>
+    </div>
+
+    <div class="input-container">
+        <label for="postTitle">Post title (max 250 characters):</label>
+        <input type="text" id="postTitle" maxlength="250">
+
+        <label for="postContent">Post content (max 1000 characters):</label>
+        <textarea id="postContent" maxlength="1000" rows="4"></textarea>
+
+        <label for="email">Email (max 250 characters):</label>
+        <input type="email" id="email" maxlength="250">
+    
+        <button id="postNowBtn" onclick="submitPost()">Post now</button>
+
     </div>
 
     <script>
@@ -91,6 +137,19 @@
 
         // Call the main function when the page loads
         window.onload = findNeighbourhood;
+
+        function submitPost() {
+            // This function will handle the post submission
+            // You can add your logic here to process the form data
+            const title = document.getElementById('postTitle').value;
+            const content = document.getElementById('postContent').value;
+            const email = document.getElementById('email').value;
+            const neighbourhood = document.getElementById('neighbourhood').textContent;
+
+            console.log('Submitting post:', { title, content, email, neighbourhood });
+            // Add your code here to send this data to your server or process it as needed
+            alert('Post submitted successfully!'); // Placeholder action
+        }
     </script>
     <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
 </body>

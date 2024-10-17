@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Feed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .post {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .post h2 {
+            margin-top: 0;
+        }
+        .post-meta {
+            color: #777;
+            font-size: 0.9em;
+        }
+        #homeBtn {
+            display: block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" id="homeBtn">Back to Home</a>
+    <div id="postContainer"></div>
+
+    <script>
+        function displayPosts() {
+            const postContainer = document.getElementById('postContainer');
+            const posts = JSON.parse(localStorage.getItem('posts')) || [];
+
+            posts.reverse().forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.className = 'post';
+                postElement.innerHTML = `
+                    <h2>${post.title}</h2>
+                    <p class="post-meta">Posted in ${post.neighbourhood} on ${post.date}</p>
+                    <p>${post.content}</p>
+                `;
+                postContainer.appendChild(postElement);
+            });
+        }
+
+        window.onload = displayPosts;
+    </script>
+</body>
+</html>
