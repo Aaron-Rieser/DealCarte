@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deal Posting - Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map { height: 500px; }
+        .draggable { cursor: move; }
+        #homeBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+   }
+    </style>
+</head>
+<body>
+    <button id="homeBtn" onclick="window.location.href='index.html'">Home</button>
+    <div id="map"></div>
+    <button id="postNowBtn">Post now</button>
+
+    <div id="dealForm" style="display: none;">
+        <h2>Enter Deal Details</h2>
+        <form id="dealDetailsForm">
+            <label>Deal Title: <input type="text" name="title" required></label><br>
+            <label>Name: <input type="text" name="name" required></label><br>
+            <label>Email: <input type="email" name="email" required></label><br>
+            <label>Description: <textarea name="description" required></textarea></label><br>
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map, marker;
+        let isDragging = false;
+
+        // Initialize the map when the page loads
+        window.onload = function() {
+            initializeMap();
+        };
+
+        function initializeMap() {
+            map = L.map('map').setView([51.505, -0.09], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+            }).addTo(map);
+
+            // Create a draggable marker at the center of the map
+            marker = L.marker(map.getCenter(), { draggable: true, icon: createIcon() }).addTo(map);
+
+            // Handle marker drag events
+            marker.on('dragstart', onMarkerDragStart);
+            marker.on('drag', onMarkerDrag);
+            marker.on('dragend', onMarkerDragEnd);
+
+            
+
+            // Detect user location
+            map.locate({setView: true, maxZoom: 16});
+
+            map.on('locationfound', function(e) {
+                // Move the existing marker to the user's location
+                marker.setLatLng(e.latlng);
+            });
+
+            map.on('locationerror', function(e) {
+                console.log(e.message);
+                // Keep the marker at the map center if location is not found
+            });
+
+            // Update marker position when map is moved (only if not dragging)
+            map.on('move', function() {
+                if (!isDragging) {
+                    marker.setLatLng(map.getCenter());
+                }
+            });
+        }
+
+        function createIcon() {
+            return L.divIcon({
+                className: 'draggable',
+                html: '<div style="background-color: red; color: white; padding: 5px;">Place deal</div>',
+                iconSize: [100, 40],
+            });
+        }
+
+        function onMarkerDragStart(e) {
+            isDragging = true;
+            map.dragging.disable(); // Disable map dragging when marker is being dragged
+        }
+
+        function onMarkerDrag(e) {
+            const mapBounds = map.getBounds();
+            const markerLatLng = e.target.getLatLng();
+            
+            // Check if marker is near the edge of the map
+            const buffer = 0.1; // Buffer zone (10% of the map size)
+            if (markerLatLng.lat > mapBounds.getNorth() - buffer * (mapBounds.getNorth() - mapBounds.getSouth()) ||
+                markerLatLng.lat < mapBounds.getSouth() + buffer * (mapBounds.getNorth() - mapBounds.getSouth()) ||
+                markerLatLng.lng > mapBounds.getEast() - buffer * (mapBounds.getEast() - mapBounds.getWest()) ||
+                markerLatLng.lng < mapBounds.getWest() + buffer * (mapBounds.getEast() - mapBounds.getWest())) {
+                
+                // Move the map to keep the marker within the buffer zone
+                map.panTo(markerLatLng);
+            }
+        }
+
+        function onMarkerDragEnd(e) {
+            isDragging = false;
+            map.dragging.enable(); // Re-enable map dragging
+        }
+
+        document.getElementById('postNowBtn').onclick = function() {
+            document.getElementById('dealForm').style.display = 'block';
+        };
+
+        document.getElementById('dealDetailsForm').onsubmit = function(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const title = formData.get('title');
+            placeDealOnMap(title);
+            document.getElementById('dealForm').style.display = 'none';
+        };
+
+        function placeDealOnMap(title) {
+            const dealMarker = L.marker(marker.getLatLng()).addTo(map);
+            dealMarker.bindPopup(title).openPopup();
+        }
+    </script>
+</body>
+</html>

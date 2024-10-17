@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Toronto Neighbourhood</title>
+</head>
+<body>
+    <h1>My Neighbourhood</h1>
+    <p id="neighbourhood">Loading...</p>
+
+    <script>
+        // Function to load GeoJSON file
+        async function loadGeoJSON() {
+            const response = await fetch('Toronto_Neighbourhoods.geojson');
+            return await response.json();
+        }
+
+        // Function to check if a point is inside a polygon
+        function isPointInPolygon(point, polygon) {
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i][0], yi = polygon[i][1];
+                const xj = polygon[j][0], yj = polygon[j][1];
+                const intersect = ((yi > point[1]) !== (yj > point[1])) &&
+                    (point[0] < (xj - xi) * (point[1] - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        // Main function to detect location and find neighbourhood
+        async function findNeighbourhood() {
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject);
+                });
+
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                const geoJSON = await loadGeoJSON();
+                
+                for (const feature of geoJSON.features) {
+                    if (feature.geometry.type === 'Polygon') {
+                        if (isPointInPolygon([lon, lat], feature.geometry.coordinates[0])) {
+                            document.getElementById('neighbourhood').textContent = `My neighbourhood: ${feature.properties.AREA_NAME}`;
+                            return;
+                        }
+                    } else if (feature.geometry.type === 'MultiPolygon') {
+                        for (const polygon of feature.geometry.coordinates) {
+                            if (isPointInPolygon([lon, lat], polygon[0])) {
+                                document.getElementById('neighbourhood').textContent = `My neighbourhood: ${feature.properties.AREA_NAME}`;
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                document.getElementById('neighbourhood').textContent = "My neighbourhood: Not found in Toronto";
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('neighbourhood').textContent = "Error: Unable to detect location or find neighbourhood";
+            }
+        }
+
+        // Call the main function when the page loads
+        window.onload = findNeighbourhood;
+    </script>
+</body>
+</html>
