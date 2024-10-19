@@ -57,18 +57,18 @@
         <div id="map"></div>
     </div>
 
-    <div class="input-container">
-        <label for="postTitle">Post title (max 250 characters):</label>
-        <input type="text" id="postTitle" maxlength="250">
+    <form id="postForm">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required>
 
-        <label for="postContent">Post content (max 1000 characters):</label>
-        <textarea id="postContent" maxlength="1000" rows="4"></textarea>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required>
 
-        <label for="email">Email (max 250 characters):</label>
-        <input type="email" id="email" maxlength="250">
-    
-        <button id="postNowBtn" onclick="submitPost()">Post now</button>
+        <label for="content">Post Content:</label>
+        <textarea id="content" name="content" required></textarea>
 
+        <button type="submit">Post Now</button>
+    </form>
     </div>
 
     <script>
@@ -150,6 +150,30 @@
             // Add your code here to send this data to your server or process it as needed
             alert('Post submitted successfully!'); // Placeholder action
         }
+        document.getElementById('postForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const content = document.getElementById('content').value;
+
+            const post = {
+                name: name,
+                content: content,
+                timestamp: new Date().toISOString()
+            };
+
+            // Get existing posts or initialize an empty array
+            let posts = JSON.parse(localStorage.getItem('posts')) || [];
+
+            // Add the new post to the beginning of the array
+            posts.unshift(post);
+
+            // Save the updated posts array back to localStorage
+            localStorage.setItem('posts', JSON.stringify(posts));
+
+            // Redirect to the post feed page
+            window.location.href = 'post_feed.html';
+        });
     </script>
     <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
 </body>
