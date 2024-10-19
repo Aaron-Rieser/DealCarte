@@ -3,59 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Toronto Neighbourhood</title>
+    <title>Post Entry</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <style>
-        #map-container {
-            display: flex;
-            align-items: center;
-        }
-        #map { 
-            width: 200px; 
-            height: 200px; 
-            margin-left: 10px;
-            
-        }
+        #map { height: 400px; }
         #homeBtn {
             position: absolute;
             top: 10px;
             right: 10px;
             z-index: 1000;
-        }
-        .input-container {
-            margin-top: 20px;
-        }
-        .input-container label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        .input-container input, .input-container textarea {
-            width: 100%;
-            max-width: 400px;
-            margin-bottom: 10px;
-        }
-        #postNowBtn {
-            margin-top: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        #postNowBtn:hover {
-            background-color: #45a049;
-        }
+   }
     </style>
 </head>
 <body>
-    <h1>Post to your hood</h1>
+    <h1>Create a New Post</h1>
     <button id="homeBtn" onclick="window.location.href='index.html'">Home</button>
-    <div id="map-container">
-        <p>My neighbourhood: <span id="neighbourhood">Loading...</span></p>
-        <div id="map"></div>
-    </div>
 
     <form id="postForm">
         <label for="name">Name:</label>
@@ -67,114 +30,81 @@
         <label for="content">Post Content:</label>
         <textarea id="content" name="content" required></textarea>
 
+        <div id="map"></div>
+
         <button type="submit">Post Now</button>
     </form>
-    </div>
 
     <script>
+        let map;
+        let selectedArea = null;
+
         // Initialize the map
-        const map = L.map('map').setView([43.7, -79.4], 10);
+        function initMap() {
+            map = L.map('map').setView([51.505, -0.09], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
 
-        // Add the tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
-        // Function to load GeoJSON file
-        async function loadGeoJSON() {
-            const response = await fetch('Toronto_Neighbourhoods.geojson');
-            return await response.json();
-        }
-
-        // Main function to detect location and find neighbourhood
-        async function findNeighbourhood() {
-            try {
-                const geoJSON = await loadGeoJSON();
-                
-                // Add GeoJSON layer to the map
-                L.geoJSON(geoJSON, {
-                    style: {
-                        fillColor: 'blue',
-                        weight: 2,
-                        opacity: 1,
-                        color: 'white',
-                        fillOpacity: 0.7
-                    },
-                    onEachFeature: function(feature, layer) {
-                        layer.bindPopup(feature.properties.AREA_NAME);
-                    }
-                }).addTo(map);
-
-                // Get user's location
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-
-                    // Add marker for user's location
-                    const marker = L.marker([lat, lon]).addTo(map);
-                    map.setView([lat, lon], 13);
-
-                    // Find the neighbourhood
-                    let neighbourhoodName = "Not found in Toronto";
-                    for (const feature of geoJSON.features) {
-                        if (turf.booleanPointInPolygon([lon, lat], feature.geometry)) {
-                            neighbourhoodName = feature.properties.AREA_NAME;
-                            break;
-                        }
-                    }
-
-                    document.getElementById('neighbourhood').textContent = neighbourhoodName;
-                }, function(error) {
-                    console.error('Error getting location:', error);
-                    document.getElementById('neighbourhood').textContent = "Error: Unable to detect location";
+            // Load GeoJSON data
+            fetch('neighbourhoods.geojson')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJSON(data, {
+                        style: function(feature) {
+                            return {
+                                fillColor: 'blue',
+                                weight: 2,
+                                opacity: 1,
+                                color: 'white',
+                                fillOpacity: 0.7
+                            };
+                        },
+                        onEachFeature: onEachFeature
+                    }).addTo(map);
                 });
-
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('neighbourhood').textContent = "Error: Unable to load neighbourhood data";
-            }
         }
 
-        // Call the main function when the page loads
-        window.onload = findNeighbourhood;
-
-        function submitPost() {
-            // This function will handle the post submission
-            // You can add your logic here to process the form data
-            const title = document.getElementById('postTitle').value;
-            const content = document.getElementById('postContent').value;
-            const email = document.getElementById('email').value;
-            const neighbourhood = document.getElementById('neighbourhood').textContent;
-
-            console.log('Submitting post:', { title, content, email, neighbourhood });
-            // Add your code here to send this data to your server or process it as needed
-            alert('Post submitted successfully!'); // Placeholder action
+        function onEachFeature(feature, layer) {
+            layer.on({
+                click: function(e) {
+                    if (selectedArea) {
+                        selectedArea.setStyle({fillColor: 'blue'});
+                    }
+                    e.target.setStyle({fillColor: 'red'});
+                    selectedArea = e.target;
+                    console.log("Selected area:", feature.properties.AREA_NAME);
+                }
+            });
         }
+
+        // Initialize the map when the page loads
+        window.onload = initMap;
+
+        // Handle form submission
         document.getElementById('postForm').addEventListener('submit', function(e) {
             e.preventDefault();
 
             const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
             const content = document.getElementById('content').value;
+            const area = selectedArea ? selectedArea.feature.properties.AREA_NAME : 'Unknown';
 
             const post = {
                 name: name,
+                email: email,
                 content: content,
+                area: area,
                 timestamp: new Date().toISOString()
             };
 
-            // Get existing posts or initialize an empty array
             let posts = JSON.parse(localStorage.getItem('posts')) || [];
-
-            // Add the new post to the beginning of the array
             posts.unshift(post);
-
-            // Save the updated posts array back to localStorage
             localStorage.setItem('posts', JSON.stringify(posts));
 
-            // Redirect to the post feed page
+            // Redirect to post_feed.html
             window.location.href = 'post_feed.html';
         });
     </script>
-    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
 </body>
 </html>
