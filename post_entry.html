@@ -3,108 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Post Entry</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <title>Create a New Post</title>
     <style>
-        #map { height: 400px; }
-        #homeBtn {
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label, input, textarea {
+            margin-bottom: 10px;
+        }
+        textarea {
+            height: 100px;
+        }
+        #homeBtn, #feedBtn {
             position: absolute;
             top: 10px;
-            right: 10px;
             z-index: 1000;
-   }
+        }
+        #homeBtn {
+            right: 1%;
+        }
+        #feedBtn {
+            right: 12%;
+        }
+        #neighborhood {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        #neighborhoodSelect {
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>Create a New Post</h1>
+    <div id="neighborhood">
+        My neighbourhood: <span id="neighborhoodName">Loading...</span>
+        <select id="neighborhoodSelect" style="display: none;">
+            <option value="">Select neighborhood</option>
+        </select>
+    </div>
     <button id="homeBtn" onclick="window.location.href='index.html'">Home</button>
+    <button id="feedBtn" onclick="window.location.href='post_feed.html'">View Feed</button>
 
     <form id="postForm">
-        <label for="name">Name:</label>
+        <label for="name">Your Name:</label>
         <input type="text" id="name" name="name" required>
-
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" required>
 
         <label for="content">Post Content:</label>
         <textarea id="content" name="content" required></textarea>
 
-        <div id="map"></div>
-
-        <button type="submit">Post Now</button>
+        <button type="submit">Submit Post</button>
     </form>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/turf/5.1.6/turf.min.js"></script>
     <script>
-        let map;
-        let selectedArea = null;
+        let neighborhoods = [];
 
-        // Initialize the map
-        function initMap() {
-            map = L.map('map').setView([51.505, -0.09], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-
-            // Load GeoJSON data
-            fetch('neighbourhoods.geojson')
-                .then(response => response.json())
-                .then(data => {
-                    L.geoJSON(data, {
-                        style: function(feature) {
-                            return {
-                                fillColor: 'blue',
-                                weight: 2,
-                                opacity: 1,
-                                color: 'white',
-                                fillOpacity: 0.7
-                            };
-                        },
-                        onEachFeature: onEachFeature
-                    }).addTo(map);
+        async function loadNeighborhoods() {
+            try {
+                const response = await fetch('Toronto_New_Neighbourhoods.geojson');
+                const data = await response.json();
+                neighborhoods = data.features.map(feature => feature.properties.name).sort();
+                
+                const select = document.getElementById('neighborhoodSelect');
+                neighborhoods.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    select.appendChild(option);
                 });
+                
+                select.style.display = 'inline-block';
+                select.addEventListener('change', function() {
+                    document.getElementById('neighborhoodName').textContent = this.value || 'Not selected';
+                });
+
+                getNeighborhood(data);
+            } catch (error) {
+                console.error('Error loading neighborhood data:', error);
+                document.getElementById('neighborhoodName').textContent = 'Error loading data';
+            }
         }
 
-        function onEachFeature(feature, layer) {
-            layer.on({
-                click: function(e) {
-                    if (selectedArea) {
-                        selectedArea.setStyle({fillColor: 'blue'});
+        function getNeighborhood(data) {
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userLocation = turf.point([position.coords.longitude, position.coords.latitude]);
+                        
+                        for (const feature of data.features) {
+                            const polygon = turf.polygon(feature.geometry.coordinates);
+                            if (turf.booleanPointInPolygon(userLocation, polygon)) {
+                                const name = feature.properties.name;
+                                document.getElementById('neighborhoodName').textContent = name;
+                                document.getElementById('neighborhoodSelect').value = name;
+                                return;
+                            }
+                        }
+                        
+                        document.getElementById('neighborhoodName').textContent = 'Not found';
+                    },
+                    () => {
+                        document.getElementById('neighborhoodName').textContent = 'Location access denied';
                     }
-                    e.target.setStyle({fillColor: 'red'});
-                    selectedArea = e.target;
-                    console.log("Selected area:", feature.properties.AREA_NAME);
-                }
-            });
+                );
+            } else {
+                document.getElementById('neighborhoodName').textContent = 'Geolocation not supported';
+            }
         }
 
-        // Initialize the map when the page loads
-        window.onload = initMap;
-
-        // Handle form submission
         document.getElementById('postForm').addEventListener('submit', function(e) {
             e.preventDefault();
-
             const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
             const content = document.getElementById('content').value;
-            const area = selectedArea ? selectedArea.feature.properties.AREA_NAME : 'Unknown';
+            const timestamp = new Date().toISOString();
+            const neighborhood = document.getElementById('neighborhoodSelect').value;
 
-            const post = {
-                name: name,
-                email: email,
-                content: content,
-                area: area,
-                timestamp: new Date().toISOString()
-            };
-
-            let posts = JSON.parse(localStorage.getItem('posts')) || [];
+            const post = { name, content, timestamp, neighborhood };
+            const posts = JSON.parse(localStorage.getItem('posts')) || [];
             posts.unshift(post);
             localStorage.setItem('posts', JSON.stringify(posts));
 
-            // Redirect to post_feed.html
+            alert('Post submitted successfully!');
             window.location.href = 'post_feed.html';
         });
+
+        // Load neighborhoods when the page loads
+        loadNeighborhoods();
     </script>
 </body>
 </html>
