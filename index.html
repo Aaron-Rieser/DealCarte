@@ -82,7 +82,7 @@
                 const button = document.createElement('button');
                 button.textContent = neighbourhood.properties.name;
                 button.addEventListener('click', () => {
-                    alert('You selected: ' + neighbourhood.properties.name);
+                    redirectToPostFeed(neighbourhood.properties.name);
                 });
                 listContainer.appendChild(button);
             });
@@ -129,10 +129,13 @@
                         className: 'neighbourhoodLabel'
                     });
                     layer.on('click', function () {
-                        alert('You selected: ' + feature.properties.name);
+                        redirectToPostFeed(feature.properties.name);
                     });
                 }
             }).addTo(map);
+        }
+        function redirectToPostFeed(neighbourhoodName) {
+            window.location.href = `post_feed.html?neighbourhood=${encodeURIComponent(neighbourhoodName)}`;
         }
     </script>
 </html>

@@ -9,7 +9,7 @@
             font-family: Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 21px;
         }
         form {
             display: flex;
@@ -45,7 +45,6 @@
 <body>
     <h1>Create a New Post</h1>
     <div id="neighborhood">
-        My neighbourhood: <span id="neighborhoodName">Loading...</span>
         <select id="neighborhoodSelect" style="display: none;">
             <option value="">Select neighborhood</option>
         </select>
@@ -130,19 +129,23 @@
 
         document.getElementById('postForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const name = document.getElementById('name').value;
+            const title = document.getElementById('title').value;
             const content = document.getElementById('content').value;
-            const timestamp = new Date().toISOString();
-            const neighborhood = document.getElementById('neighborhoodSelect').value;
+            const neighbourhood = document.getElementById('neighbourhood').value;
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
 
-            const post = { name, content, timestamp, neighborhood };
-            const posts = JSON.parse(localStorage.getItem('posts')) || [];
-            posts.unshift(post);
-            localStorage.setItem('posts', JSON.stringify(posts));
+            // Save the post data (you'll need to implement this part)
+            // For now, we'll just log it to the console
+            console.log('Post data:', { title, content, neighbourhood, latitude, longitude });
 
-            alert('Post submitted successfully!');
-            window.location.href = 'post_feed.html';
+            // Redirect to the post_feed page with the selected neighbourhood
+            redirectToPostFeed(neighbourhood);
         });
+        
+        function redirectToPostFeed(neighbourhoodName) {
+            window.location.href = `post_feed.html?neighbourhood=${encodeURIComponent(neighbourhoodName)}`;
+        }
 
         // Load neighborhoods when the page loads
         loadNeighborhoods();

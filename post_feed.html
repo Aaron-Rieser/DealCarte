@@ -41,6 +41,8 @@
 </head>
 <body>
     <h1>Post Feed</h1>
+    <h2 id="neighbourhoodTitle">Posts in </h2>
+
     <button id="homeBtn" onclick="window.location.href='index.html'">Home</button>
     <button id="PostNowBtn" onclick="window.location.href='post_entry.html'">Post now</button>
     <div id="post-container">
@@ -48,6 +50,13 @@
     </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const neighbourhood = urlParams.get('neighbourhood');
+            if (neighbourhood) {
+                document.getElementById('neighbourhoodTitle').textContent += decodeURIComponent(neighbourhood);
+            }
+        });
         function loadPosts() {
             const postContainer = document.getElementById('post-container');
             const posts = JSON.parse(localStorage.getItem('posts')) || [];
