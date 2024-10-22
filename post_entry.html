@@ -94,31 +94,39 @@
         }
 
         function getNeighborhood(data) {
-            if ('geolocation' in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const userLocation = turf.point([position.coords.longitude, position.coords.latitude]);
-                        
-                        for (const feature of data.features) {
-                            const polygon = turf.polygon(feature.geometry.coordinates);
-                            if (turf.booleanPointInPolygon(userLocation, polygon)) {
-                                const name = feature.properties.name;
-                                document.getElementById('neighborhoodName').textContent = name;
-                                document.getElementById('neighborhoodSelect').value = name;
-                                return;
-                            }
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const userLocation = turf.point([position.coords.longitude, position.coords.latitude]);
+                    
+                    let foundNeighborhood = null;
+                    for (const feature of data.features) {
+                        // Check if the feature has a MultiPolygon or Polygon geometry
+                        const geometry = feature.geometry.type === 'MultiPolygon' 
+                            ? turf.multiPolygon(feature.geometry.coordinates)
+                            : turf.polygon(feature.geometry.coordinates);
+
+                        if (turf.booleanPointInPolygon(userLocation, geometry)) {
+                            foundNeighborhood = feature.properties.name;
+                            break;
                         }
-                        
-                        document.getElementById('neighborhoodName').textContent = 'Not found';
-                    },
-                    () => {
-                        document.getElementById('neighborhoodName').textContent = 'Location access denied';
                     }
-                );
-            } else {
-                document.getElementById('neighborhoodName').textContent = 'Geolocation not supported';
-            }
+                    
+                    if (foundNeighborhood) {
+                        document.getElementById('neighborhoodName').textContent = foundNeighborhood;
+                        document.getElementById('neighborhoodSelect').value = foundNeighborhood;
+                    } else {
+                        document.getElementById('neighborhoodName').textContent = 'Not found';
+                    }
+                },
+                () => {
+                    document.getElementById('neighborhoodName').textContent = 'Location access denied';
+                }
+            );
+        } else {
+            document.getElementById('neighborhoodName').textContent = 'Geolocation not supported';
         }
+    }
 
         document.getElementById('postForm').addEventListener('submit', function(e) {
             e.preventDefault();

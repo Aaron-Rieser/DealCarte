@@ -4,85 +4,135 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deal Posting - Home</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
-
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+            display: none;
+        }
+        #neighbourhoodList {
+            display: none;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        #neighbourhoodList button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
-    <h1>Welcome to Posters Paradise</h1>
-    <button id="detectLocation" class="button">Detect My Location</button>
+    <h1>Welcome to Post Up Toronto</h1>
+    <h2>Choose your hood</h2>
+    <button id="chooseNeighbourhood" class="button">Choose on Map</button>
+    <button id="chooseNeighbourhoodList" class="button">Choose from List</button>
     <button onclick="window.location.href='post_entry.html'">Create a new post</button>
     <button onclick="window.location.href='post_feed.html'">Find posts near me</button>
-    <button id="displayCoordinates" class="button">Display My Coordinates</button>
     <div id="locationInfo"></div>
-    <div id="coordinatesInfo"></div>
+    <div id="map"></div>
+    <div id="neighbourhoodList"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/turf/5.1.6/turf.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
-        document.getElementById('detectLocation').addEventListener('click', detectLocation);
-        document.getElementById('displayCoordinates').addEventListener('click', displayCoordinates);
-
-        async function detectLocation() {
-            const locationInfo = document.getElementById('locationInfo');
-            locationInfo.textContent = 'Detecting location...';
-
-            if ('geolocation' in navigator) {
-                try {
-                    const position = await new Promise((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(resolve, reject);
-                    });
-
-                    const response = await fetch('Toronto_New_Neighbourhoods.geojson');
-                    const data = await response.json();
-
-                    const userLocation = turf.point([position.coords.longitude, position.coords.latitude]);
-                    
-                    for (const feature of data.features) {
-                        const polygon = turf.polygon(feature.geometry.coordinates);
-                        if (turf.booleanPointInPolygon(userLocation, polygon)) {
-                            locationInfo.textContent = `Your neighborhood: ${feature.properties.name}`;
-                            return;
-                        }
-                    }
-                    
-                    locationInfo.textContent = 'Your location is not within any known Toronto neighborhood.';
-                } catch (error) {
-                    if (error.code === 1) { // PERMISSION_DENIED
-                        locationInfo.textContent = 'Location access denied. Please enable location services and try again.';
-                    } else {
-                        locationInfo.textContent = 'Error detecting location. Please try again.';
-                        console.error('Error:', error);
-                    }
-                }
+        let neighbourhoods;
+    
+        document.getElementById('chooseNeighbourhood').addEventListener('click', function() {
+            document.getElementById('map').style.display = 'block';
+            document.getElementById('neighbourhoodList').style.display = 'none';
+            initMap();
+        });
+    
+        document.getElementById('chooseNeighbourhoodList').addEventListener('click', function() {
+            document.getElementById('map').style.display = 'none';
+            document.getElementById('neighbourhoodList').style.display = 'block';
+            if (!neighbourhoods) {
+                loadNeighbourhoods();
             } else {
-                locationInfo.textContent = 'Geolocation is not supported by your browser.';
+                displayNeighbourhoodList();
+            }
+        });
+    
+        function loadNeighbourhoods() {
+            fetch('Toronto_New_Neighbourhoods.geojson')
+                .then(response => response.json())
+                .then(data => {
+                    neighbourhoods = data.features;
+                    displayNeighbourhoodList();
+                })
+                .catch(error => {
+                    console.error('Error loading neighbourhoods:', error);
+                    alert('Failed to load neighbourhoods. Please try again.');
+                });
+        }
+    
+        function displayNeighbourhoodList() {
+            const listContainer = document.getElementById('neighbourhoodList');
+            listContainer.innerHTML = '';
+            neighbourhoods.forEach(neighbourhood => {
+                const button = document.createElement('button');
+                button.textContent = neighbourhood.properties.name;
+                button.addEventListener('click', () => {
+                    alert('You selected: ' + neighbourhood.properties.name);
+                });
+                listContainer.appendChild(button);
+            });
+        }
+    
+        function initMap() {
+            const map = L.map('map').setView([43.7, -79.4], 10);
+    
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+    
+            if (!neighbourhoods) {
+                fetch('Toronto_New_Neighbourhoods.geojson')
+                    .then(response => response.json())
+                    .then(data => {
+                        neighbourhoods = data.features;
+                        addGeoJsonToMap(map, data);
+                    })
+                    .catch(error => {
+                        console.error('Error loading neighbourhoods:', error);
+                        alert('Failed to load neighbourhoods. Please try again.');
+                    });
+            } else {
+                addGeoJsonToMap(map, {type: "FeatureCollection", features: neighbourhoods});
             }
         }
-
-        function displayCoordinates() {
-            const coordinatesInfo = document.getElementById('coordinatesInfo');
-            coordinatesInfo.textContent = 'Fetching coordinates...';
-
-            if ('geolocation' in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const latitude = position.coords.latitude.toFixed(6);
-                        const longitude = position.coords.longitude.toFixed(6);
-                        coordinatesInfo.textContent = `Your coordinates: ${latitude}, ${longitude}`;
-                    },
-                    (error) => {
-                        if (error.code === 1) { // PERMISSION_DENIED
-                            coordinatesInfo.textContent = 'Location access denied. Please enable location services and try again.';
-                        } else {
-                            coordinatesInfo.textContent = 'Error fetching coordinates. Please try again.';
-                            console.error('Error:', error);
-                        }
-                    }
-                );
-            } else {
-                coordinatesInfo.textContent = 'Geolocation is not supported by your browser.';
-            }
+    
+        function addGeoJsonToMap(map, data) {
+            L.geoJSON(data, {
+                style: function (feature) {
+                    return {
+                        fillColor: 'blue',
+                        weight: 2,
+                        opacity: 1,
+                        color: 'white',
+                        fillOpacity: 0.7
+                    };
+                },
+                onEachFeature: function (feature, layer) {
+                    layer.bindTooltip(feature.properties.name, {
+                        permanent: false,
+                        direction: 'center',
+                        className: 'neighbourhoodLabel'
+                    });
+                    layer.on('click', function () {
+                        alert('You selected: ' + feature.properties.name);
+                    });
+                }
+            }).addTo(map);
         }
     </script>
-</body>
 </html>
