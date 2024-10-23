@@ -37,6 +37,11 @@
             right: 12%;
             z-index: 1000;
    }
+   .post-image {
+        max-width: 100%;
+        height: auto;
+        margin-top: 10px;
+    }
     </style>
 </head>
 <body>
@@ -44,7 +49,7 @@
     <h2 id="neighbourhoodTitle">Posts in </h2>
 
     <button id="homeBtn" onclick="window.location.href='index.html'">Home</button>
-    <button id="PostNowBtn" onclick="window.location.href='post_entry.html'">Post now</button>
+    <button id="PostNowBtn" onclick="goToPostEntry()">Post now</button>
     <div id="post-container">
         <!-- Posts will be dynamically inserted here -->
     </div>
@@ -56,38 +61,60 @@
             if (neighbourhood) {
                 document.getElementById('neighbourhoodTitle').textContent += decodeURIComponent(neighbourhood);
             }
+            // Load posts when the page loads, passing the neighbourhood
+            loadPosts(neighbourhood);
         });
-        function loadPosts() {
+
+        function goToPostEntry() {
+            const neighbourhood = new URLSearchParams(window.location.search).get('neighbourhood');
+            window.location.href = `post_entry.html?neighbourhood=${encodeURIComponent(neighbourhood)}`;
+        }
+
+        function loadPosts(neighbourhood) {
             const postContainer = document.getElementById('post-container');
             const posts = JSON.parse(localStorage.getItem('posts')) || [];
 
-            if (posts.length === 0) {
-                postContainer.innerHTML = '<p>No posts yet. Be the first to post!</p>';
+            const filteredPosts = posts.filter(post => post.neighborhood === neighbourhood);
+
+            if (filteredPosts.length === 0) {
+                postContainer.innerHTML = '<p>No posts yet in this neighborhood. Be the first to post!</p>';
                 return;
             }
 
+            filteredPosts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
             postContainer.innerHTML = '';
-            posts.forEach(post => {
+            filteredPosts.forEach(post => {
                 const postElement = createPostElement(post);
                 postContainer.appendChild(postElement);
             });
         }
-
         function createPostElement(post) {
             const postDiv = document.createElement('div');
             postDiv.className = 'post';
             postDiv.innerHTML = `
                 <div class="post-header">
                     <strong>${post.name}</strong>
-                    <span>${new Date(post.timestamp).toLocaleString()}</span>
+                    <span>${formatDateTime(post.timestamp)}</span>
                 </div>
                 <div class="post-content">${post.content}</div>
+                ${post.image ? `<img src="${post.image}" alt="Post image" class="post-image">` : ''}
             `;
             return postDiv;
         }
 
-        // Load posts when the page loads
-        loadPosts();
+        function formatDateTime(timestamp) {
+            const date = new Date(timestamp);
+            const options = { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true 
+            };
+            return date.toLocaleString('en-US', options);
+        }
     </script>
 </body>
 </html>

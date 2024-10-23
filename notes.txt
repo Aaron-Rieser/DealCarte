@@ -1,0 +1,10 @@
+need to see whats wrong with the post_entry files, they are not aligned.
+
+
+- copy code, delte, try and reload again
+
+or 
+
+- rename, rename back. code again.. 
+
+get neighbourhoods to work again too. 

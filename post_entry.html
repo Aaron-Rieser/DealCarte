@@ -40,6 +40,14 @@
         #neighborhoodSelect {
             margin-left: 10px;
         }
+        #imagePreview {
+            width: 200px;
+            height: 200px;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+            display: none;
+            object-fit: cover;
+        }
     </style>
 </head>
 <body>
@@ -58,6 +66,10 @@
 
         <label for="content">Post Content:</label>
         <textarea id="content" name="content" required></textarea>
+
+        <label for="image">Upload Image (optional):</label>
+        <input type="file" id="image" name="image" accept="image/*">
+        <img id="imagePreview" alt="Image preview">
 
         <button type="submit">Submit Post</button>
     </form>
@@ -85,7 +97,15 @@
                     document.getElementById('neighborhoodName').textContent = this.value || 'Not selected';
                 });
 
-                getNeighborhood(data);
+                // Auto-select neighborhood if passed in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const passedNeighborhood = urlParams.get('neighbourhood');
+                if (passedNeighborhood) {
+                    select.value = decodeURIComponent(passedNeighborhood);
+                    document.getElementById('neighborhoodName').textContent = select.value;
+                } else {
+                    getNeighborhood(data);
+                }
             } catch (error) {
                 console.error('Error loading neighborhood data:', error);
                 document.getElementById('neighborhoodName').textContent = 'Error loading data';
@@ -127,25 +147,51 @@
         }
     }
 
-        document.getElementById('postForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const title = document.getElementById('title').value;
-            const content = document.getElementById('content').value;
-            const neighbourhood = document.getElementById('neighbourhood').value;
-            const latitude = document.getElementById('latitude').value;
-            const longitude = document.getElementById('longitude').value;
-
-            // Save the post data (you'll need to implement this part)
-            // For now, we'll just log it to the console
-            console.log('Post data:', { title, content, neighbourhood, latitude, longitude });
-
-            // Redirect to the post_feed page with the selected neighbourhood
-            redirectToPostFeed(neighbourhood);
+    document.getElementById('image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
         });
-        
-        function redirectToPostFeed(neighbourhoodName) {
-            window.location.href = `post_feed.html?neighbourhood=${encodeURIComponent(neighbourhoodName)}`;
-        }
+
+    document.getElementById('postForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('name').value;
+        const content = document.getElementById('content').value;
+        const neighborhood = document.getElementById('neighborhoodSelect').value;
+        const imageFile = document.getElementById('image').files[0];
+
+        // Create a new post object
+        const newPost = {
+            name: name,
+            content: content,
+            neighborhood: neighborhood,
+            timestamp: new Date().toISOString(),
+            image: imageFile ? document.getElementById('imagePreview').src : null
+        };
+
+        // Get existing posts from localStorage or initialize an empty array
+        const posts = JSON.parse(localStorage.getItem('posts')) || [];
+
+        // Add the new post to the array
+        posts.push(newPost);
+
+        // Save the updated posts array back to localStorage
+        localStorage.setItem('posts', JSON.stringify(posts));
+
+        // Redirect to the post_feed page with the selected neighborhood
+        redirectToPostFeed(neighborhood);
+    });
+    
+    function redirectToPostFeed(neighborhoodName) {
+        window.location.href = `post_feed.html?neighbourhood=${encodeURIComponent(neighborhoodName)}`;
+    }
 
         // Load neighborhoods when the page loads
         loadNeighborhoods();
